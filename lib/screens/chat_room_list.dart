@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async'; // StreamSubscriptionを使用するためにインポート
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_sample/api/sample_request.dart';
@@ -17,6 +18,7 @@ class ChatRoomList extends StatefulWidget {
 class ChatRoomListState extends State<ChatRoomList> {
   List<ChatRoomDto?>? chatRoomData; // APIレスポンスを格納するリスト
   bool isLoading = true; // ローディング状態を管理
+  StreamSubscription<String>? _webSocketSubscription; // WebSocketの購読を保存する変数
 
   @override
   void initState() {
@@ -32,7 +34,9 @@ class ChatRoomListState extends State<ChatRoomList> {
       print(results); // デバッグ用に出力
 
       // resultsがマップ形式であることを確認
-      if (results is Map<String, dynamic> && results.containsKey('room_list') && mounted) {
+      if (results is Map<String, dynamic> &&
+          results.containsKey('room_list') &&
+          mounted) {
         setState(() {
           // room_listからChatRoomDtoのリストを取得
           chatRoomData = (results['room_list'] as List)
@@ -56,21 +60,31 @@ class ChatRoomListState extends State<ChatRoomList> {
   }
 
   void _listenForMessages() {
-    WebSocketManager().stream.listen((message) {
+    _webSocketSubscription = WebSocketManager().stream.listen((message) {
+          // ChatRoomListが最上位のウィジェットかどうかを確認
+      final isChatRoomListTop = context.findAncestorWidgetOfExactType<ChatRoomList>() != null;
+
+      if (!isChatRoomListTop) {
+        print('ChatRoomList is not the top widget. Ignoring message processing.');
+        return; // ChatRoomListが最上位でない場合は処理を中止
+      }
+
       print('[IN CHAT ROOM LIST] Received WebSocket message: $message');
+      print('chat_room_list mounted');
+      print(mounted);
 
       // メッセージをデコード
       final decodedMessage = jsonDecode(message);
       final roomId = decodedMessage['room_id']; // room_idを取得
       final newMessage = decodedMessage['message']; // 新しいメッセージを取得
 
-      if (roomId != null && newMessage != null) {
+      if (roomId != null && newMessage != null && mounted) {
         // チャットルームデータを更新
         setState(() {
           // 該当するチャットルームを特定
           final chatRoom = chatRoomData?.firstWhere(
             (room) => room?.roomId == roomId, // Use conditional access for room
-            // orElse: () => null,
+            // orElse: () => null, // orElseを追加
           );
 
           if (chatRoom != null) {
@@ -98,6 +112,7 @@ class ChatRoomListState extends State<ChatRoomList> {
 
   @override
   void dispose() {
+    _webSocketSubscription?.cancel(); // WebSocketのリスナーをキャンセル
     WebSocketManager().dispose(); // WebSocketのクローズ処理
     super.dispose();
   }

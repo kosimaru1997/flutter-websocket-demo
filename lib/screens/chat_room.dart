@@ -62,7 +62,9 @@ class ChatRoomState extends State<ChatRoom> {
 
   void _listenForMessages() {
     _subscription = WebSocketManager().stream.listen((message) {
-      print('WebSocket message: $message');
+      print('[CHAT_VIEW]WebSocket message: $message');
+      print('chat viiew mounted');
+      print(mounted);
       final decodedMessage = jsonDecode(message); // JSONをデコード
 
       final roomId = decodedMessage['room_id']; // room_idを取得
