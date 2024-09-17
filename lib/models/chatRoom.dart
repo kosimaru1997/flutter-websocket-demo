@@ -11,9 +11,9 @@ class ChatRoomDto {
   // プロパティ
   final String userId;
   final String roomId;
-  final String? lastMessage; // Optional
-  final int uncheckedCount;
-  final int updatedAt;
+  String? lastMessage; // Optional
+  int uncheckedCount;
+  int updatedAt;
 
   // JSONからChatRoomを生成するファクトリコンストラクタ
   factory ChatRoomDto.fromJson(Map<String, dynamic> json) {
